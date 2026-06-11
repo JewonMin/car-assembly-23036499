@@ -16,24 +16,14 @@ int main()
 #include <thread>
 #include <chrono>
 
-// 1-6: #define → constexpr
 constexpr const char* CLEAR_SCREEN = "\033[H\033[2J";
 
-int stack[10];
-
-void selectCarType(int answer);
-void selectEngine(int answer);
-void selectBrakeSystem(int answer);   // 1-1: selectbrakeSystem → selectBrakeSystem
-void selectSteeringSystem(int answer);
-void runProducedCar();
-void testProducedCar();
-void delay(int ms);
-
+// 2-2: UI 진행 단계만 담당 — 더 이상 배열 인덱스로 사용하지 않음
 enum QuestionType
 {
     CarType_Q,
     Engine_Q,
-    BrakeSystem_Q,      // 1-1: brakeSystem_Q → BrakeSystem_Q
+    BrakeSystem_Q,
     SteeringSystem_Q,
     Run_Test,
 };
@@ -50,10 +40,10 @@ enum Engine
     GM = 1,
     TOYOTA,
     WIA,
-    BROKEN  // 1-9: 매직 넘버 4 → 명명된 열거값
+    BROKEN
 };
 
-enum BrakeSystem    // 1-1: brakeSystem → BrakeSystem
+enum BrakeSystem
 {
     MANDO = 1,
     CONTINENTAL,
@@ -66,7 +56,24 @@ enum SteeringSystem
     MOBIS
 };
 
-// 1-7: busy-wait → std::this_thread::sleep_for
+// 2-1: 전역 int stack[10] 제거 → 타입이 명확한 구조체로 교체
+struct CarConfig
+{
+    CarType        carType;
+    Engine         engine;
+    BrakeSystem    brakeSystem;
+    SteeringSystem steeringSystem;
+};
+
+void selectCarType(CarConfig& config, int answer);
+void selectEngine(CarConfig& config, int answer);
+void selectBrakeSystem(CarConfig& config, int answer);
+void selectSteeringSystem(CarConfig& config, int answer);
+bool isValidCheck(const CarConfig& config);  // 2-3: 전역 상태 의존 제거
+void runProducedCar(const CarConfig& config);
+void testProducedCar(const CarConfig& config);
+void delay(int ms);
+
 void delay(int ms)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
@@ -74,8 +81,9 @@ void delay(int ms)
 
 int main()
 {
-    std::string input;  // 1-8: char buf[100] → std::string
+    std::string input;
     int step = CarType_Q;
+    CarConfig config{};  // 2-1: 전역 stack[] 대신 지역 변수로 관리
 
     while (1)
     {
@@ -132,7 +140,6 @@ int main()
         printf("===============================\n");
         printf("INPUT > ");
 
-        // 1-8: fgets + strtok_s → std::getline
         std::getline(std::cin, input);
 
         if (input == "exit")
@@ -141,7 +148,6 @@ int main()
             break;
         }
 
-        // 1-8: strtol + checkNumber → std::stoi + try-catch
         int answer = 0;
         try
         {
@@ -203,47 +209,46 @@ int main()
 
         if (step == CarType_Q)
         {
-            selectCarType(answer);
+            selectCarType(config, answer);
             delay(800);
             step = Engine_Q;
         }
         else if (step == Engine_Q)
         {
-            selectEngine(answer);
+            selectEngine(config, answer);
             delay(800);
             step = BrakeSystem_Q;
         }
         else if (step == BrakeSystem_Q)
         {
-            selectBrakeSystem(answer);
+            selectBrakeSystem(config, answer);
             delay(800);
             step = SteeringSystem_Q;
         }
         else if (step == SteeringSystem_Q)
         {
-            selectSteeringSystem(answer);
+            selectSteeringSystem(config, answer);
             delay(800);
             step = Run_Test;
         }
         else if (step == Run_Test && answer == 1)
         {
-            runProducedCar();
+            runProducedCar(config);
             delay(2000);
         }
         else if (step == Run_Test && answer == 2)
         {
             printf("Test...\n");
             delay(1500);
-            testProducedCar();
+            testProducedCar(config);
             delay(2000);
         }
     }
 }
 
-void selectCarType(int answer)
+void selectCarType(CarConfig& config, int answer)
 {
-    stack[CarType_Q] = answer;
-    // 1-4: if 체인 → if-else 체인
+    config.carType = static_cast<CarType>(answer);
     if (answer == SEDAN)
         printf("차량 타입으로 Sedan을 선택하셨습니다.\n");
     else if (answer == SUV)
@@ -252,10 +257,9 @@ void selectCarType(int answer)
         printf("차량 타입으로 Truck을 선택하셨습니다.\n");
 }
 
-void selectEngine(int answer)
+void selectEngine(CarConfig& config, int answer)
 {
-    stack[Engine_Q] = answer;
-    // 1-4: if 체인 → if-else 체인
+    config.engine = static_cast<Engine>(answer);
     if (answer == GM)
         printf("GM 엔진을 선택하셨습니다.\n");
     else if (answer == TOYOTA)
@@ -266,11 +270,9 @@ void selectEngine(int answer)
         printf("고장난 엔진을 선택하셨습니다.\n");
 }
 
-// 1-1: selectbrakeSystem → selectBrakeSystem
-void selectBrakeSystem(int answer)
+void selectBrakeSystem(CarConfig& config, int answer)
 {
-    stack[BrakeSystem_Q] = answer;
-    // 1-4: if 체인 → if-else 체인
+    config.brakeSystem = static_cast<BrakeSystem>(answer);
     if (answer == MANDO)
         printf("MANDO 제동장치를 선택하셨습니다.\n");
     else if (answer == CONTINENTAL)
@@ -279,82 +281,78 @@ void selectBrakeSystem(int answer)
         printf("BOSCH 제동장치를 선택하셨습니다.\n");
 }
 
-void selectSteeringSystem(int answer)
+void selectSteeringSystem(CarConfig& config, int answer)
 {
-    stack[SteeringSystem_Q] = answer;
-    // 1-4: if 체인 → if-else 체인
+    config.steeringSystem = static_cast<SteeringSystem>(answer);
     if (answer == BOSCH_S)
         printf("BOSCH 조향장치를 선택하셨습니다.\n");
     else if (answer == MOBIS)
         printf("MOBIS 조향장치를 선택하셨습니다.\n");
 }
 
-// 1-2: 반환 타입 int → bool / 1-3: 마지막 dead code return true 제거
-bool isValidCheck()
+// 2-3: 검증 단일 진입점 — 전역 상태 대신 CarConfig를 인자로 받아 어디서든 호출 가능
+bool isValidCheck(const CarConfig& config)
 {
-    if (stack[CarType_Q] == SEDAN && stack[BrakeSystem_Q] == CONTINENTAL)
+    if (config.carType == SEDAN && config.brakeSystem == CONTINENTAL)
         return false;
-    else if (stack[CarType_Q] == SUV && stack[Engine_Q] == TOYOTA)
+    else if (config.carType == SUV && config.engine == TOYOTA)
         return false;
-    else if (stack[CarType_Q] == TRUCK && stack[Engine_Q] == WIA)
+    else if (config.carType == TRUCK && config.engine == WIA)
         return false;
-    else if (stack[CarType_Q] == TRUCK && stack[BrakeSystem_Q] == MANDO)
+    else if (config.carType == TRUCK && config.brakeSystem == MANDO)
         return false;
-    else if (stack[BrakeSystem_Q] == BOSCH_B && stack[SteeringSystem_Q] != BOSCH_S)
+    else if (config.brakeSystem == BOSCH_B && config.steeringSystem != BOSCH_S)
         return false;
     return true;
 }
 
-void runProducedCar()
+void runProducedCar(const CarConfig& config)
 {
-    if (!isValidCheck())
+    if (!isValidCheck(config))
     {
         printf("자동차가 동작되지 않습니다\n");
         return;
     }
 
-    // 1-9: stack[Engine_Q] == 4 → BROKEN
-    if (stack[Engine_Q] == BROKEN)
+    if (config.engine == BROKEN)
     {
         printf("엔진이 고장나있습니다.\n");
         printf("자동차가 움직이지 않습니다.\n");
         return;
     }
 
-    // 1-4: if 체인 → if-else 체인
-    if (stack[CarType_Q] == SEDAN)
+    if (config.carType == SEDAN)
         printf("Car Type : Sedan\n");
-    else if (stack[CarType_Q] == SUV)
+    else if (config.carType == SUV)
         printf("Car Type : SUV\n");
-    else if (stack[CarType_Q] == TRUCK)
+    else if (config.carType == TRUCK)
         printf("Car Type : Truck\n");
 
-    if (stack[Engine_Q] == GM)
+    if (config.engine == GM)
         printf("Engine : GM\n");
-    else if (stack[Engine_Q] == TOYOTA)
+    else if (config.engine == TOYOTA)
         printf("Engine : TOYOTA\n");
-    else if (stack[Engine_Q] == WIA)
+    else if (config.engine == WIA)
         printf("Engine : WIA\n");
 
-    if (stack[BrakeSystem_Q] == MANDO)
+    if (config.brakeSystem == MANDO)
         printf("Brake System : Mando\n");
-    else if (stack[BrakeSystem_Q] == CONTINENTAL)
+    else if (config.brakeSystem == CONTINENTAL)
         printf("Brake System : Continental\n");
-    else if (stack[BrakeSystem_Q] == BOSCH_B)
+    else if (config.brakeSystem == BOSCH_B)
         printf("Brake System : Bosch\n");
 
-    if (stack[SteeringSystem_Q] == BOSCH_S)
+    if (config.steeringSystem == BOSCH_S)
         printf("SteeringSystem : Bosch\n");
-    else if (stack[SteeringSystem_Q] == MOBIS)
+    else if (config.steeringSystem == MOBIS)
         printf("SteeringSystem : Mobis\n");
 
     printf("자동차가 동작됩니다.\n");
 }
 
-// 1-5: isValidCheck() 재사용으로 중복 검증 로직 제거
-void testProducedCar()
+void testProducedCar(const CarConfig& config)
 {
-    if (isValidCheck())
+    if (isValidCheck(config))
     {
         printf("자동차 부품 조합 테스트 결과 : PASS\n");
         return;
@@ -362,15 +360,15 @@ void testProducedCar()
 
     printf("자동차 부품 조합 테스트 결과 : FAIL\n");
 
-    if (stack[CarType_Q] == SEDAN && stack[BrakeSystem_Q] == CONTINENTAL)
+    if (config.carType == SEDAN && config.brakeSystem == CONTINENTAL)
         printf("Sedan에는 Continental제동장치 사용 불가\n");
-    else if (stack[CarType_Q] == SUV && stack[Engine_Q] == TOYOTA)
+    else if (config.carType == SUV && config.engine == TOYOTA)
         printf("SUV에는 TOYOTA엔진 사용 불가\n");
-    else if (stack[CarType_Q] == TRUCK && stack[Engine_Q] == WIA)
+    else if (config.carType == TRUCK && config.engine == WIA)
         printf("Truck에는 WIA엔진 사용 불가\n");
-    else if (stack[CarType_Q] == TRUCK && stack[BrakeSystem_Q] == MANDO)
+    else if (config.carType == TRUCK && config.brakeSystem == MANDO)
         printf("Truck에는 Mando제동장치 사용 불가\n");
-    else if (stack[BrakeSystem_Q] == BOSCH_B && stack[SteeringSystem_Q] != BOSCH_S)
+    else if (config.brakeSystem == BOSCH_B && config.steeringSystem != BOSCH_S)
         printf("Bosch제동장치에는 Bosch조향장치 이외 사용 불가\n");
 }
 
