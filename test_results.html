@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unit Test Results — car_assemble</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      padding: 40px 24px;
+    }
+
+    .container { max-width: 860px; margin: 0 auto; }
+
+    /* Header */
+    header { margin-bottom: 36px; }
+    header h1 { font-size: 1.6rem; font-weight: 700; color: #f0f6fc; }
+    header p  { margin-top: 6px; color: #8b949e; font-size: 0.9rem; }
+
+    /* Summary cards */
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 36px;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 18px 16px;
+      text-align: center;
+    }
+    .card .num  { font-size: 2rem; font-weight: 700; }
+    .card .lbl  { font-size: 0.75rem; color: #8b949e; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card.green .num { color: #3fb950; }
+    .card.blue  .num { color: #58a6ff; }
+    .card.gray  .num { color: #8b949e; }
+    .card.red   .num { color: #f85149; }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .badge-pass   { background: #1a3d24; color: #3fb950; border: 1px solid #238636; }
+    .badge-skip   { background: #2e2a1e; color: #e3b341; border: 1px solid #9e6a03; }
+    .badge-fail   { background: #3d1a1a; color: #f85149; border: 1px solid #8b1a1a; }
+    .badge-suite  { background: #1c2a3a; color: #58a6ff; border: 1px solid #1f6feb; font-size: 0.68rem; }
+
+    /* Test suite block */
+    .suite { margin-bottom: 28px; }
+    .suite-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px 8px 0 0;
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: #f0f6fc;
+    }
+    .suite-header .suite-meta {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: #8b949e;
+      font-weight: 400;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #30363d;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      overflow: hidden;
+    }
+    thead th {
+      background: #1c2128;
+      padding: 8px 14px;
+      text-align: left;
+      font-size: 0.72rem;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      border-bottom: 1px solid #30363d;
+    }
+    tbody tr { border-bottom: 1px solid #21262d; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #1c2128; }
+    tbody td { padding: 10px 14px; font-size: 0.875rem; }
+    .test-name { font-family: "SFMono-Regular", Consolas, monospace; color: #c9d1d9; }
+    .test-desc { font-size: 0.78rem; color: #8b949e; margin-top: 2px; }
+    .duration  { color: #8b949e; font-family: monospace; font-size: 0.8rem; }
+
+    /* Divider */
+    .section-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8b949e;
+      margin: 32px 0 12px;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #21262d;
+      font-size: 0.78rem;
+      color: #8b949e;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    footer span b { color: #c9d1d9; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Unit Test Results</h1>
+    <p>car_assemble &nbsp;/&nbsp; assemble.cpp &nbsp;|&nbsp; Phase 4 — OCP 기반 확장성 리팩토링</p>
+  </header>
+
+  <!-- Summary -->
+  <div class="summary">
+    <div class="card blue">
+      <div class="num">14</div>
+      <div class="lbl">Total</div>
+    </div>
+    <div class="card green">
+      <div class="num">14</div>
+      <div class="lbl">Passed</div>
+    </div>
+    <div class="card red">
+      <div class="num">0</div>
+      <div class="lbl">Failed</div>
+    </div>
+    <div class="card gray">
+      <div class="num">1 ms</div>
+      <div class="lbl">Duration</div>
+    </div>
+  </div>
+
+  <!-- CarValidatorTest -->
+  <p class="section-title">Test Suites</p>
+
+  <div class="suite">
+    <div class="suite-header">
+      <span class="badge badge-suite">CarValidatorTest</span>
+      통합 검증 — 기본 규칙 세트 전체 시나리오
+      <span class="suite-meta">8 tests &nbsp;|&nbsp; 0 ms</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:42%">Test Name</th>
+          <th>Description</th>
+          <th style="width:8%">Status</th>
+          <th style="width:7%">Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="test-name">Valid_Sedan_GM_Mando_Bosch</span></td>
+          <td><span class="test-desc">Sedan + GM 엔진 + Mando 제동 + Bosch 조향 → 유효 조합</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+        <tr>
+          <td><span class="test-name">Invalid_Sedan_Continental</span></td>
+          <td><span class="test-desc">Sedan에 Continental 제동장치 → 불가 (failReason 검증 포함)</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+        <tr>
+          <td><span class="test-name">Invalid_SUV_Toyota</span></td>
+          <td><span class="test-desc">SUV에 TOYOTA 엔진 → 불가 (failReason 검증 포함)</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+        <tr>
+          <td><span class="test-name">Invalid_Truck_WIA</span></td>
+          <td><span class="test-desc">Truck에 WIA 엔진 → 불가 (failReason 검증 포함)</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+        <tr>
+          <td><span class="test-name">Invalid_Truck_Mando</span></td>
+          <td><span class="test-desc">Truck에 Mando 제동장치 → 불가 (failReason 검증 포함)</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+        <tr>
+          <td><span class="test-name">Invalid_BoschBrake_MobisSteering</span></td>
+          <td><span class="test-desc">Bosch 제동 + Mobis 조향 → 불가 (failReason 검증 포함)</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+        <tr>
+          <td><span class="test-name">Valid_BoschBrake_BoschSteering</span></td>
+          <td><span class="test-desc">Bosch 제동 + Bosch 조향 → 유효 조합</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+        <tr>
+          <td><span class="test-name">NewVanType_Works_Without_Modifying_Existing_Code</span></td>
+          <td><span class="test-desc">VanType 신규 클래스 추가 — 기존 CarValidator/규칙 코드 수정 없이 동작 (OCP 확장성 검증)</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- EngineCarTypeRuleTest -->
+  <div class="suite">
+    <div class="suite-header">
+      <span class="badge badge-suite">EngineCarTypeRuleTest</span>
+      엔진-차종 호환성 규칙 단위 검증
+      <span class="suite-meta">2 tests &nbsp;|&nbsp; 0 ms</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:42%">Test Name</th>
+          <th>Description</th>
+          <th style="width:8%">Status</th>
+          <th style="width:7%">Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="test-name">Toyota_Invalid_For_SUV</span></td>
+          <td><span class="test-desc">ToyotaEngine.isCompatibleWith(SuvType) → false</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+        <tr>
+          <td><span class="test-name">WIA_Invalid_For_Truck</span></td>
+          <td><span class="test-desc">WiaEngine.isCompatibleWith(TruckType) → false</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- BrakeCarTypeRuleTest -->
+  <div class="suite">
+    <div class="suite-header">
+      <span class="badge badge-suite">BrakeCarTypeRuleTest</span>
+      제동장치-차종 호환성 규칙 단위 검증
+      <span class="suite-meta">2 tests &nbsp;|&nbsp; 0 ms</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:42%">Test Name</th>
+          <th>Description</th>
+          <th style="width:8%">Status</th>
+          <th style="width:7%">Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="test-name">Continental_Invalid_For_Sedan</span></td>
+          <td><span class="test-desc">ContinentalBrake.isCompatibleWith(SedanType) → false</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+        <tr>
+          <td><span class="test-name">Mando_Invalid_For_Truck</span></td>
+          <td><span class="test-desc">MandoBrake.isCompatibleWith(TruckType) → false</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- BoschBrakeSteeringRuleTest -->
+  <div class="suite">
+    <div class="suite-header">
+      <span class="badge badge-suite">BoschBrakeSteeringRuleTest</span>
+      Bosch 제동-조향 연동 규칙 단위 검증
+      <span class="suite-meta">2 tests &nbsp;|&nbsp; 0 ms</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:42%">Test Name</th>
+          <th>Description</th>
+          <th style="width:8%">Status</th>
+          <th style="width:7%">Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="test-name">BoschBrake_Requires_BoschSteering</span></td>
+          <td><span class="test-desc">BoschBrake + MobisSteering → isSatisfied() = false</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+        <tr>
+          <td><span class="test-name">NonBoschBrake_DoesNotRequireBoschSteering</span></td>
+          <td><span class="test-desc">MandoBrake + MobisSteering → requiresBoschSteering() = false → isSatisfied() = true</span></td>
+          <td><span class="badge badge-pass">PASS</span></td>
+          <td class="duration">0 ms</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    <span>Framework: <b>Google Mock (gmock)</b></span>
+    <span>Compiler: <b>MSVC 19.51 (VS 2026, x64)</b></span>
+    <span>Standard: <b>C++17</b></span>
+    <span>Build macro: <b>/DUNIT_TESTING /MD</b></span>
+    <span>Run date: <b>2026-06-11</b></span>
+  </footer>
+
+</div>
+</body>
+</html>
