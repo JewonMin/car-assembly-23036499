@@ -356,6 +356,129 @@ int main() {
 
 ---
 
+---
+
+## Phase 5. 파일 분리 — 제조 순서 기반 폴더 구조
+
+> 단일 `assemble.cpp`를 **제조 순서**가 폴더 구조에서 바로 보이도록 분리한다.  
+> `step1` / `step2` / `shared` 세 폴더로 일관되게 구성하고,  
+> `#ifdef UNIT_TESTING` 분기를 제거하여 테스트를 독립 파일로 이동한다.
+
+### 목표 디렉토리 구조
+
+```
+car_assemble/
+│
+├── include/
+│   ├── step1_type_selection/       ← [1단계] 자동차 타입 선택
+│   │   ├── ICarType.h              ← ICarType 인터페이스 + Sedan/Suv/TruckType
+│   │   └── CarTypeSelector.h       ← CarTypeSelector 선언
+│   │
+│   ├── step2_part_assembly/        ← [2단계] 부품 조립 (엔진 / 제동 / 조향)
+│   │   ├── IEngine.h               ← IEngine + Gm/Toyota/Wia/BrokenEngine
+│   │   ├── IBrakeSystem.h          ← IBrakeSystem + Mando/Continental/BoschBrake
+│   │   ├── ISteeringSystem.h       ← ISteeringSystem + Bosch/MobisSteering
+│   │   └── CarPartAssembler.h      ← CarPartAssembler 선언
+│   │
+│   └── shared/                     ← 두 단계에 공통으로 쓰이는 타입·규칙
+│       ├── Car.h                   ← Car 구조체 (shared_ptr 기반)
+│       ├── IValidationRule.h       ← IValidationRule + 규칙 구현체 3개
+│       └── CarValidator.h          ← CarValidator 선언
+│
+├── src/
+│   ├── step1_type_selection/
+│   │   └── CarTypeSelector.cpp
+│   │
+│   ├── step2_part_assembly/
+│   │   └── CarPartAssembler.cpp
+│   │
+│   ├── shared/
+│   │   └── CarValidator.cpp
+│   │
+│   ├── CarAssembler.cpp            ← orchestrator: 두 단계를 순서대로 호출
+│   └── main.cpp
+│
+└── test/
+    └── test_main.cpp               ← Google Mock 유닛 테스트 14개
+```
+
+> `CarAssembler.h` / `.cpp`는 step1·step2 위에서 두 단계를 조합하는  
+> orchestrator이므로 어느 step 폴더에도 속하지 않고 `src/` 루트에 둔다.
+
+---
+
+### 5-1. 폴더 분기 — 제조 순서 반영
+
+`include/`와 `src/` 모두 **step1 / step2 / shared** 세 폴더로 일관되게 구성한다.  
+폴더를 열면 제조 순서와 공유 자산이 한눈에 구분된다.
+
+---
+
+### 5-2. 클래스 분리 — `CarTypeSelector` / `CarPartAssembler`
+
+기존 `CarAssembler`의 단계별 책임을 두 클래스로 분리한다.
+
+| 클래스 | 폴더 | 책임 |
+|--------|------|------|
+| `CarTypeSelector` | `step1_type_selection/` | 차종 선택 UI + `Car.type` 설정 |
+| `CarPartAssembler` | `step2_part_assembly/` | 엔진·제동·조향 선택 UI + `Car` 부품 설정 |
+| `CarValidator` | `shared/` | 조합 유효성 검증 |
+| `CarAssembler` | 루트 | 두 단계를 순서대로 호출하는 orchestrator |
+
+`CarAssembler::assemble()`을 읽으면 제조 순서가 코드에서 바로 보인다.
+
+```cpp
+// src/CarAssembler.cpp
+bool CarAssembler::assemble(Car& car) {
+    if (!typeSelector_.select(car))    return false;  // 1단계: 차종 선택
+    if (!partAssembler_.assemble(car)) return false;  // 2단계: 부품 조립
+    return true;
+}
+```
+
+---
+
+### 5-3. `test/test_main.cpp` 분리
+
+- 기존 `#ifdef UNIT_TESTING` 블록 → `test/test_main.cpp`로 이동
+- `assemble.cpp`에서 `#ifdef UNIT_TESTING` 분기 완전 제거
+- 테스트는 `include/` 하위 헤더만 include
+
+```cpp
+// test/test_main.cpp
+#include "gmock/gmock.h"
+#include "../include/shared/CarValidator.h"
+#include "../include/step2_part_assembly/IEngine.h"
+// ...
+```
+
+---
+
+### 5-4. 빌드 방법 업데이트
+
+**프로덕션 빌드**
+```bat
+cl /EHsc /std:c++17 /MD /I"include" ^
+   src\step1_type_selection\CarTypeSelector.cpp ^
+   src\step2_part_assembly\CarPartAssembler.cpp ^
+   src\shared\CarValidator.cpp ^
+   src\CarAssembler.cpp src\main.cpp ^
+   /Fe:car_assemble.exe
+```
+
+**테스트 빌드**
+```bat
+cl /EHsc /std:c++17 /MD /I"include" /I"<gmock-include>" ^
+   src\step1_type_selection\CarTypeSelector.cpp ^
+   src\step2_part_assembly\CarPartAssembler.cpp ^
+   src\shared\CarValidator.cpp ^
+   test\test_main.cpp ^
+   /Fe:test_runner.exe ^
+   /link <gmock.lib> <gmock_main.lib>
+```
+
+---
+
 ## 진행 순서 요약
 
 | 순서 | Phase | 항목 |
@@ -383,3 +506,7 @@ int main() {
 | 21 | 확장성 | `CarValidator` 규칙을 `IValidationRule` 목록으로 분리 (4-4) |
 | 22 | 확장성 | `CarAssembler`에 부품 목록 의존성 주입 (4-5) |
 | 23 | 확장성 | 유닛 테스트 보강 (4-6) |
+| 24 | 파일 분리 | `step1` / `step2` / `shared` 폴더 분기 (5-1) |
+| 25 | 파일 분리 | `CarTypeSelector` / `CarPartAssembler` 클래스 분리 (5-2) |
+| 26 | 파일 분리 | `test/test_main.cpp` 분리 + `#ifdef UNIT_TESTING` 제거 (5-3) |
+| 27 | 파일 분리 | 빌드 방법 업데이트 (5-4) |

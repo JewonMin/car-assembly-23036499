@@ -7,7 +7,7 @@
 ## 리팩토링 개요
 
 원본 코드(`assemblyCar`)는 전역 배열, 매직 넘버, 중복 검증 로직을 가진 절차지향 구조였습니다.  
-PDF 가이드(Day2_1_Agentic Engineering, p.20-24)에 따라 4단계 리팩토링을 진행했습니다.
+PDF 가이드(Day2_1_Agentic Engineering, p.20-24)에 따라 5단계 리팩토링을 진행했습니다.
 
 | Phase | 범위 | 주요 변경 |
 |-------|------|-----------|
@@ -15,69 +15,70 @@ PDF 가이드(Day2_1_Agentic Engineering, p.20-24)에 따라 4단계 리팩토�
 | **Phase 2** | Data Structure | 전역 `stack[]` → `CarConfig` 구조체, 검증 단일 진입점 확보 |
 | **Phase 3** | Class Level | `Car` / `CarValidator` / `CarAssembler` 클래스 분리, UI·비즈니스 로직 분리 |
 | **Phase 4** | 확장성 (OCP) | 인터페이스 계층 도입, 규칙 객체 패턴, 의존성 주입, 유닛 테스트 14개 |
+| **Phase 5** | 파일 분리 | 제조 순서 기반 폴더 구조, `#ifdef UNIT_TESTING` 제거, `test/` 독립 분리 |
 
 ---
 
-## 코드 구조
+## 프로젝트 구조
 
-모든 코드는 `assemble.cpp` 단일 파일에 있으며, 빌드 매크로로 **테스트 빌드**와 **프로덕션 빌드**를 분리합니다.
+**제조 순서(1단계 차종 선택 → 2단계 부품 조립)가 폴더 구조에 직접 반영**되어 있습니다.
 
 ```
-assemble.cpp
+car_assemble/
 │
-├── [공유 영역] ─────────────────────────────────────────────────
+├── include/
+│   ├── step1_type_selection/       ← [1단계] 자동차 타입 선택
+│   │   ├── ICarType.h              ICarType 인터페이스 + Sedan / SUV / Truck
+│   │   └── CarTypeSelector.h       차종 선택 UI 담당
 │   │
-│   ├── 차종 인터페이스
-│   │   ├── ICarType          (interface)
-│   │   ├── SedanType
-│   │   ├── SuvType
-│   │   └── TruckType
+│   ├── step2_part_assembly/        ← [2단계] 부품 조립 (엔진 / 제동 / 조향)
+│   │   ├── IEngine.h               IEngine + GM / Toyota / WIA / Broken
+│   │   ├── IBrakeSystem.h          IBrakeSystem + Mando / Continental / Bosch
+│   │   ├── ISteeringSystem.h       ISteeringSystem + Bosch / Mobis
+│   │   └── CarPartAssembler.h      부품 3종 선택 UI 담당
 │   │
-│   ├── 엔진 인터페이스
-│   │   ├── IEngine           (interface: name, isBroken, isCompatibleWith)
-│   │   ├── GmEngine
-│   │   ├── ToyotaEngine      (SUV 불가)
-│   │   ├── WiaEngine         (Truck 불가)
-│   │   └── BrokenEngine
+│   ├── shared/                     ← 두 단계 공통 타입 · 검증
+│   │   ├── Car.h                   Car 구조체 (shared_ptr 기반)
+│   │   ├── IValidationRule.h       IValidationRule + 규칙 구현체 3개
+│   │   ├── CarValidator.h          CarValidator (규칙 목록 기반)
+│   │   └── utils.h                 CLEAR_SCREEN / EXIT_SIGNAL / delayMs / readInput
 │   │
-│   ├── 제동장치 인터페이스
-│   │   ├── IBrakeSystem      (interface: name, isCompatibleWith, requiresBoschSteering)
-│   │   ├── MandoBrake        (Truck 불가)
-│   │   ├── ContinentalBrake  (Sedan 불가)
-│   │   └── BoschBrake        (Bosch 조향장치 필수)
-│   │
-│   ├── 조향장치 인터페이스
-│   │   ├── ISteeringSystem   (interface: name, isBoschType)
-│   │   ├── BoschSteering
-│   │   └── MobisSteering
-│   │
-│   ├── Car                   (shared_ptr 기반 부품 컨테이너)
-│   │
-│   ├── 검증 규칙 인터페이스
-│   │   ├── IValidationRule   (interface: isSatisfied, failReason)
-│   │   ├── EngineCarTypeRule
-│   │   ├── BrakeCarTypeRule
-│   │   └── BoschBrakeSteeringRule
-│   │
-│   └── CarValidator          (규칙 목록 기반: addRule / isValid / getFailReason)
+│   └── CarAssembler.h              ← Orchestrator: step1 → step2 순서 조합
 │
-├── [#ifdef UNIT_TESTING] ───────────────────────────────────────
-│   └── Google Mock 유닛 테스트 14개
-│       ├── CarValidatorTest       (8개 — 통합 시나리오 + OCP 확장성)
-│       ├── EngineCarTypeRuleTest  (2개)
-│       ├── BrakeCarTypeRuleTest   (2개)
-│       └── BoschBrakeSteeringRuleTest (2개)
+├── src/                            ← include 와 동일한 폴더 구조
+│   ├── step1_type_selection/CarTypeSelector.cpp
+│   ├── step2_part_assembly/CarPartAssembler.cpp
+│   ├── shared/CarValidator.cpp
+│   ├── CarAssembler.cpp
+│   └── main.cpp
 │
-└── [#else — Production] ────────────────────────────────────────
-    ├── CarAssembler  (부품 목록 의존성 주입, 단계별 조립 UI)
-    ├── runCar()      (검증 후 차량 정보 출력)
-    ├── testCar()     (PASS / FAIL + 실패 이유 출력)
-    └── main()        (CarAssembler + CarValidator 조립 및 루프)
+└── test/
+    └── test_main.cpp               ← Google Mock 유닛 테스트 14개
 ```
 
-### 핵심 설계 원칙
+---
 
-**Open-Closed Principle** — 새 차종·부품 공급사를 추가할 때 기존 클래스를 수정하지 않아도 됩니다.
+## 핵심 설계 원칙
+
+### 제조 순서의 가시성
+
+`CarAssembler::assemble()`을 읽으면 제조 순서가 코드에서 바로 보입니다.
+
+```cpp
+bool CarAssembler::assemble(Car& car) {
+    while (true) {
+        if (!typeSelector_.select(car))              return false;  // 1단계: 차종 선택
+        auto result = partAssembler_.assemble(car);
+        if (result == PartAssembleResult::Done)      return true;   // 조립 완료
+        if (result == PartAssembleResult::Exit)      return false;  // 종료
+        // BackToTypeSelect → 루프 반복
+    }
+}
+```
+
+### Open-Closed Principle
+
+새 차종·부품 공급사를 추가할 때 기존 클래스를 수정하지 않아도 됩니다.
 
 ```cpp
 // 새 차종 추가: ICarType 구현체만 작성
@@ -85,12 +86,14 @@ class VanType : public ICarType {
 public: std::string name() const override { return "Van"; }
 };
 
-// 새 규칙 추가: IValidationRule 구현체만 작성, CarValidator는 수정 없음
+// 새 규칙 추가: IValidationRule 구현체만 작성
 class NewRule : public IValidationRule { ... };
 validator.addRule(std::make_shared<NewRule>());
 ```
 
-**의존성 주입** — `CarAssembler`가 부품 목록을 외부에서 받아 메뉴를 자동 구성합니다.
+### 의존성 주입
+
+`CarAssembler`가 부품 목록을 외부에서 받아 메뉴를 자동 구성합니다.
 
 ```cpp
 CarAssembler assembler(
@@ -107,23 +110,35 @@ CarAssembler assembler(
 테스트 결과 상세 보기: [`test_results.html`](test_results.html)
 
 ```
-[==========] 14 tests from 4 test suites.
+[==========] 14 tests from 4 test suites ran. (0 ms total)
 [  PASSED  ] 14 tests.
 ```
+
+| Test Suite | 검증 대상 | 수 |
+|---|---|---|
+| `CarValidatorTest` | 통합 시나리오 + OCP 확장성 | 8 |
+| `EngineCarTypeRuleTest` | 엔진-차종 호환성 규칙 | 2 |
+| `BrakeCarTypeRuleTest` | 제동장치-차종 호환성 규칙 | 2 |
+| `BoschBrakeSteeringRuleTest` | Bosch 제동-조향 연동 규칙 | 2 |
 
 ### 빌드 및 실행
 
 ```bat
 rem 테스트 빌드 (Visual Studio 개발자 명령 프롬프트에서)
-cl /EHsc /std:c++17 /MD /DUNIT_TESTING ^
-   /I"<gmock-include>" assemble.cpp ^
+cl /EHsc /std:c++17 /MD /I"include" /I"<gmock-include>" ^
+   src\shared\CarValidator.cpp test\test_main.cpp ^
    /Fe:test_runner.exe ^
-   /link "<gmock.lib>" "<gmock_main.lib>"
+   /link <gmock.lib> <gmock_main.lib>
 
 test_runner.exe
 
 rem 프로덕션 빌드
-cl /EHsc /std:c++17 /MD assemble.cpp /Fe:car_assemble.exe
+cl /EHsc /std:c++17 /MD /I"include" ^
+   src\step1_type_selection\CarTypeSelector.cpp ^
+   src\step2_part_assembly\CarPartAssembler.cpp ^
+   src\shared\CarValidator.cpp ^
+   src\CarAssembler.cpp src\main.cpp ^
+   /Fe:car_assemble.exe
 ```
 
 ---
@@ -132,8 +147,8 @@ cl /EHsc /std:c++17 /MD assemble.cpp /Fe:car_assemble.exe
 
 | 조건 | 구현 위치 |
 |------|-----------|
-| Toyota 엔진 → SUV 사용 불가 | `ToyotaEngine::isCompatibleWith` |
-| WIA 엔진 → Truck 사용 불가 | `WiaEngine::isCompatibleWith` |
-| Continental 제동 → Sedan 사용 불가 | `ContinentalBrake::isCompatibleWith` |
-| Mando 제동 → Truck 사용 불가 | `MandoBrake::isCompatibleWith` |
-| Bosch 제동 → Bosch 조향 필수 | `BoschBrakeSteeringRule::isSatisfied` |
+| Toyota 엔진 → SUV 사용 불가 | `step2_part_assembly/IEngine.h` — `ToyotaEngine::isCompatibleWith` |
+| WIA 엔진 → Truck 사용 불가 | `step2_part_assembly/IEngine.h` — `WiaEngine::isCompatibleWith` |
+| Continental 제동 → Sedan 사용 불가 | `step2_part_assembly/IBrakeSystem.h` — `ContinentalBrake::isCompatibleWith` |
+| Mando 제동 → Truck 사용 불가 | `step2_part_assembly/IBrakeSystem.h` — `MandoBrake::isCompatibleWith` |
+| Bosch 제동 → Bosch 조향 필수 | `shared/IValidationRule.h` — `BoschBrakeSteeringRule::isSatisfied` |
